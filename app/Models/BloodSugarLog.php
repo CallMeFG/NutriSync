@@ -10,7 +10,8 @@ class BloodSugarLog extends Model
         'client_uuid',
         'patient_id',
         'glucose_level',
-        'context',
+        'measurement_type',
+        'notes',
         'measurement_time',
     ];
 

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('code_hash');
-            $table->enum('purpose', ['email_verification', 'sensitive_action', 'password_reset', 'device_verification']);
+            $table->enum('purpose', ['email_verification', 'sensitive_action', 'password_reset', 'device_verification', 'step_up_auth']);
             $table->unsignedTinyInteger('attempts')->default(0);
             $table->timestamp('expires_at');
             $table->timestamp('verified_at')->nullable();

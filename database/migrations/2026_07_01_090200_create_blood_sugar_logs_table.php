@@ -15,7 +15,8 @@ return new class extends Migration
             $table->uuid('client_uuid')->unique();
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
             $table->unsignedSmallInteger('glucose_level'); // mg/dL, validasi range 20-600 di Form Request
-            $table->enum('context', ['puasa', 'setelah_makan', 'acak', 'sebelum_tidur']);
+            $table->string('measurement_type', 30);
+            $table->text('notes')->nullable();
             $table->dateTime('measurement_time');
             $table->timestamps();
 

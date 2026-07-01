@@ -14,8 +14,8 @@ class TurnstileValid implements ValidationRule
     {
         // Graceful Local Testing Fallback: Jika di lokal/testing dan secret key kosong atau token placeholder
         if (app()->environment('local', 'testing')) {
-            if (empty(config('services.turnstile.secret_key')) || $value === 'dev_placeholder_token' || $value === '1x00000000000000000000AA') {
-                Log::info('[Local Dev] Turnstile verification bypassed due to empty secret key or test token.');
+            if (empty($value) || empty(config('services.turnstile.secret_key')) || $value === 'dev_placeholder_token' || $value === '1x00000000000000000000AA') {
+                Log::info('[Local Dev] Turnstile verification bypassed due to empty value, empty secret key, or test token.');
 
                 return;
             }

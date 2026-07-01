@@ -31,7 +31,7 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
-            'cf-turnstile-response' => ['required', new TurnstileValid],
+            'cf-turnstile-response' => [app()->environment('local', 'testing') ? 'nullable' : 'required', new TurnstileValid],
         ];
     }
 

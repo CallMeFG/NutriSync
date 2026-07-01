@@ -42,7 +42,7 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|string|in:patient,caregiver',
             'phone_number' => 'nullable|string|max:20',
-            'cf-turnstile-response' => ['required', new TurnstileValid],
+            'cf-turnstile-response' => [app()->environment('local', 'testing') ? 'nullable' : 'required', new TurnstileValid],
         ]);
 
         $user = User::create([

@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class NutritionLog extends Model
 {
     protected $fillable = [
+        'client_uuid',
         'patient_id',
-        'barcode_number',
-        'food_name',
-        'sugar_content_per_100g',
-        'estimated_portion_g',
+        'barcode',
+        'product_name',
+        'sugar_per_serving_g',
+        'serving_size_g',
         'result_status',
-        'daily_limit_contribution_pct',
         'scanned_at',
     ];
 
