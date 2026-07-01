@@ -57,7 +57,7 @@ return [
     | risiko berdasarkan kontribusi satu produk ke batas gula harian.
     */
     'product_score_thresholds' => [
-        'bahaya'  => 80, // >= 80% dari batas harian → Bahaya
+        'bahaya' => 80, // >= 80% dari batas harian → Bahaya
         'waspada' => 40, // >= 40% dari batas harian → Waspada
         // < 40% → Aman
     ],
@@ -71,8 +71,8 @@ return [
     */
     'validation_ranges' => [
         'glucose_level' => ['min' => 20,  'max' => 600],
-        'weight_kg'     => ['min' => 20,  'max' => 200],
-        'height_cm'     => ['min' => 100, 'max' => 220],
+        'weight_kg' => ['min' => 20,  'max' => 200],
+        'height_cm' => ['min' => 100, 'max' => 220],
         'age_max_years' => 30, // batasan realistis untuk remaja/young adult
     ],
 

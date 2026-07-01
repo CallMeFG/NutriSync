@@ -1,12 +1,23 @@
 *.log
-/.agent/
-/*.pdf
 .DS_Store
+Thumbs.db
+
+# ── NutriSync: file lokal yang tidak boleh masuk repo ──────────────────────
+# Folder konfigurasi agent AI (instruksi, blueprint, checklist)
+.agent/
+# File PDF desain/rancangan sistem — ukuran besar, simpan di Google Drive/external
+*.pdf
+
+# ── Kredensial & environment ────────────────────────────────────────────────
 .env
 .env.backup
 .env.production
 .phpactor.json
 .phpunit.result.cache
+/auth.json
+/storage/*.key
+
+# ── IDE & editor ────────────────────────────────────────────────────────────
 /.codex
 /.cursor/
 /.idea
@@ -14,16 +25,15 @@
 /.phpunit.cache
 /.vscode
 /.zed
-/auth.json
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+
+# ── Laravel & Node build artifacts ─────────────────────────────────────────
 /node_modules
 /public/build
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
-/storage/*.key
 /storage/pail
 /vendor
-_ide_helper.php
-Homestead.json
-Homestead.yaml
-Thumbs.db
