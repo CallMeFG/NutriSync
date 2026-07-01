@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\BloodSugarController;
+use App\Http\Controllers\NutritionController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
@@ -37,13 +39,28 @@ Route::middleware(['auth', 'verified', 'role:patient'])->prefix('patient')->name
     Route::get('/dashboard', function () {
         return Inertia::render('Patient/Dashboard');
     })->name('dashboard');
+
+    // Fitur Gula Darah & HbA1c
+    Route::get('/blood-sugar', [BloodSugarController::class, 'index'])->name('blood-sugar.index');
+    Route::post('/blood-sugar', [BloodSugarController::class, 'store'])->name('blood-sugar.store');
+    Route::post('/blood-sugar/sync-offline', [BloodSugarController::class, 'syncOffline'])->name('blood-sugar.sync-offline');
+
+    // Fitur Pindai Nutrisi / Scan Barcode
+    Route::get('/nutrition', [NutritionController::class, 'index'])->name('nutrition.index');
+    Route::post('/nutrition', [NutritionController::class, 'store'])->name('nutrition.store');
+    Route::get('/nutrition/lookup', [NutritionController::class, 'lookupBarcode'])->name('nutrition.lookup');
+    Route::post('/nutrition/sync-offline', [NutritionController::class, 'syncOffline'])->name('nutrition.sync-offline');
 });
 
 // ─── Grup Route untuk Caregiver (Orang Tua / Wali) ────────────────────────────
 Route::middleware(['auth', 'verified', 'role:caregiver'])->prefix('caregiver')->name('caregiver.')->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Caregiver/Dashboard');
+    Route::get('/dashboard', function (Request $request) {
+        return Inertia::render('Caregiver/Dashboard', [
+            'patients' => $request->user()->monitoredPatients()->with('user')->get(),
+        ]);
     })->name('dashboard');
+
+    Route::get('/patient/{patient}/blood-sugar', [BloodSugarController::class, 'show'])->name('patient.blood-sugar');
 });
 
 // ─── Grup Route untuk Faskes Admin ────────────────────────────────────────────

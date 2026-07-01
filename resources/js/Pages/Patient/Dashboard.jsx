@@ -63,13 +63,12 @@ export default function PatientDashboard() {
                                 Pindai barcode makanan/minuman kemasan untuk mengecek kandungan gula dan skor risiko diabetes secara instan.
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => alert('Fitur Scan Barcode akan kita bangun pada fase berikutnya!')}
-                            className="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition text-sm"
+                        <Link
+                            href={route('patient.nutrition.index')}
+                            className="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition text-sm text-center block"
                         >
                             📷 Pindai Makanan Sekarang
-                        </button>
+                        </Link>
                     </div>
 
                     <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
@@ -82,13 +81,12 @@ export default function PatientDashboard() {
                                 Catat riwayat pemeriksaan gula darah (puasa/sewaktu) atau HbA1c untuk pemantauan klinis bersama AI.
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => alert('Fitur Catat Gula Darah akan kita bangun pada fase berikutnya!')}
-                            className="mt-6 w-full py-3 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-md transition text-sm"
+                        <Link
+                            href={route('patient.blood-sugar.index')}
+                            className="mt-6 w-full py-3 bg-gray-900 hover:bg-gray-800 text-white font-bold rounded-xl shadow-md transition text-sm text-center block"
                         >
                             ➕ Catat Gula Darah
-                        </button>
+                        </Link>
                     </div>
                 </div>
 

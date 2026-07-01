@@ -1,8 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
+import { getUnsyncedCount, syncQueue } from '@/lib/offlineQueue';
 
 export default function PatientLayout({ header, children }) {
     const user = usePage().props.auth.user;
+    const [unsyncedCount, setUnsyncedCount] = useState(0);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const checkQueue = async () => {
+        try {
+            const count = await getUnsyncedCount();
+            setUnsyncedCount(count);
+        } catch (e) {
+            console.warn(e);
+        }
+    };
+
+    useEffect(() => {
+        checkQueue();
+        window.addEventListener('nutrisync:queue-updated', checkQueue);
+        window.addEventListener('online', checkQueue);
+        return () => {
+            window.removeEventListener('nutrisync:queue-updated', checkQueue);
+            window.removeEventListener('online', checkQueue);
+        };
+    }, []);
+
+    const handleManualSync = async () => {
+        setIsSyncing(true);
+        await syncQueue();
+        await checkQueue();
+        setIsSyncing(false);
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20 md:pb-0 font-sans">
@@ -36,6 +65,23 @@ export default function PatientLayout({ header, children }) {
                 </div>
             </header>
 
+            {/* Indikator UI Eksplisit untuk Data Offline Belum Sinkron (Aturan Wajib #10) */}
+            {unsyncedCount > 0 && (
+                <div className="bg-amber-500 text-white px-4 sm:px-6 lg:px-8 py-2.5 text-xs font-bold flex justify-between items-center shadow-inner">
+                    <div className="flex items-center gap-2">
+                        <span>⚠️ {unsyncedCount} data medis belum tersinkron ke server.</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleManualSync}
+                        disabled={isSyncing}
+                        className="bg-white text-amber-900 px-3 py-1 rounded-lg shadow-xs hover:bg-amber-50 transition font-bold disabled:opacity-50"
+                    >
+                        {isSyncing ? '⏳ Sinkronisasi...' : '🔄 Sinkronkan Sekarang'}
+                    </button>
+                </div>
+            )}
+
             {/* Page Header */}
             {header && (
                 <div className="bg-white border-b border-gray-100 shadow-2xs py-4 px-4 sm:px-6 lg:px-8">
@@ -61,25 +107,27 @@ export default function PatientLayout({ header, children }) {
                         <span>Beranda</span>
                     </Link>
 
-                    <button
-                        type="button"
-                        onClick={() => alert('Fitur Pindai Barcode (Scan) akan hadir di fase berikutnya!')}
-                        className="flex flex-col items-center justify-center gap-1 text-xs font-semibold text-gray-500 hover:text-emerald-600"
+                    <Link
+                        href={route('patient.nutrition.index')}
+                        className={`flex flex-col items-center justify-center gap-1 text-xs font-semibold ${
+                            route().current('patient.nutrition.index') ? 'text-emerald-600' : 'text-gray-500 hover:text-emerald-600'
+                        }`}
                     >
                         <span className="text-xl bg-emerald-100 text-emerald-700 p-1.5 rounded-full shadow-xs -mt-3 border-2 border-white">
                             📷
                         </span>
                         <span>Pindai</span>
-                    </button>
+                    </Link>
 
-                    <button
-                        type="button"
-                        onClick={() => alert('Fitur Catat Gula Darah akan hadir di fase berikutnya!')}
-                        className="flex flex-col items-center justify-center gap-1 text-xs font-semibold text-gray-500 hover:text-emerald-600"
+                    <Link
+                        href={route('patient.blood-sugar.index')}
+                        className={`flex flex-col items-center justify-center gap-1 text-xs font-semibold ${
+                            route().current('patient.blood-sugar.index') ? 'text-emerald-600' : 'text-gray-500 hover:text-emerald-600'
+                        }`}
                     >
                         <span className="text-xl">🩸</span>
                         <span>Gula Darah</span>
-                    </button>
+                    </Link>
 
                     <Link
                         href={route('profile.edit')}
