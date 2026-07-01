@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\DeviceTrustService;
+use App\Services\OtpService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,16 +26,30 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
-    /**
-     * Handle an incoming authentication request.
-     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $user = $request->user();
+        $deviceTrust = app(DeviceTrustService::class);
+
+        // Cek apakah device ini sudah dikenal (trusted)
+        if (! $deviceTrust->isTrusted($user, $request)) {
+            $otpService = app(OtpService::class);
+            $otpService->generateAndSend($user, 'step_up_auth');
+
+            Auth::logout();
+            $request->session()->put('pending_2fa_user_id', $user->id);
+
+            return redirect()->route('stepup.show');
+        }
+
+        // Jika device sudah trusted, perpanjang cookie
+        $cookie = $deviceTrust->trustThisDevice($user, $request);
+
+        return redirect()->intended(route('dashboard', absolute: false))->withCookie($cookie);
     }
 
     /**

@@ -60,4 +60,14 @@ return [
         'base_url' => env('SATUSEHAT_BASE_URL', 'https://api-satusehat-stg.dto.kemkes.go.id'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudflare Turnstile (Anti-Bot)
+    |--------------------------------------------------------------------------
+    */
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
 ];

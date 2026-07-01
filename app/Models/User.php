@@ -7,11 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laragear\WebAuthn\WebAuthnAuthentication;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, WebAuthnAuthentication;
 
     protected $fillable = [
         'name',
@@ -78,5 +79,11 @@ class User extends Authenticatable
         return $this->belongsToMany(Patient::class, 'caregiver_patient', 'caregiver_id', 'patient_id')
             ->withPivot('status', 'paired_at')
             ->wherePivot('status', 'active');
+    }
+
+    /** WAJIB implementasi method ini agar bisa dicari saat login WebAuthn */
+    public function webAuthnId(): string
+    {
+        return $this->email;
     }
 }

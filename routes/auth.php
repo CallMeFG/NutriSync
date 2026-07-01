@@ -5,6 +5,8 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\OtpController;
+use App\Http\Controllers\Auth\PairingController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
@@ -56,4 +58,19 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
+
+    Route::middleware('throttle:6,1')->group(function () {
+        Route::post('/otp/send', [OtpController::class, 'send'])->name('otp.send');
+        Route::post('/otp/verify', [OtpController::class, 'verify'])->name('otp.verify');
+    });
+
+    Route::get('/pairing', [PairingController::class, 'show'])->name('pairing.show');
+    Route::post('/pairing', [PairingController::class, 'store'])->name('pairing.store');
+    Route::post('/pairing/skip', [PairingController::class, 'skip'])->name('pairing.skip');
+});
+
+Route::middleware(['web', 'throttle:6,1'])->group(function () {
+    Route::get('/step-up', [OtpController::class, 'stepUpShow'])->name('stepup.show');
+    Route::post('/step-up/send', [OtpController::class, 'stepUpSend'])->name('stepup.send');
+    Route::post('/step-up/verify', [OtpController::class, 'stepUpVerify'])->name('stepup.verify');
 });
