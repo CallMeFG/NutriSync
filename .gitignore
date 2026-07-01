@@ -1,4 +1,6 @@
 *.log
+/.agent/
+/*.pdf
 .DS_Store
 .env
 .env.backup

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +13,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Alias middleware role — wajib ada sebelum dipakai di routes/web.php
+        // Cara Laravel 13: daftar di sini, bukan di Kernel.php (tidak ada di Laravel 11+)
+        $middleware->alias([
+            'role' => EnsureRole::class,
+        ]);
+
+        // HandleInertiaRequests WAJIB di grup web agar shared props (auth user, flash) tersedia di React
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
+            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

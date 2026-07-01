@@ -17,8 +17,16 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            // Role: 3 nilai tetap, tidak butuh sistem permission granular (spatie tidak dipakai)
+            $table->enum('role', ['patient', 'caregiver', 'faskes_admin'])->default('patient');
+            // phone_number: wajib diisi saat registrasi caregiver (untuk menerima WhatsApp alert)
+            // Format: E.164 tanpa tanda '+' — contoh: 6281234567890
+            // Nullable karena patient & faskes_admin tidak butuh
+            $table->string('phone_number', 20)->nullable();
             $table->rememberToken();
             $table->timestamps();
+
+            $table->index('role'); // dipakai untuk filter middleware EnsureRole & dashboard faskes
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
