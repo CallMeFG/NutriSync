@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mysql": {
+      "command": "npx",
+      "args": [
+        "-y", 
+        "@modelcontextprotocol/server-mysql",
+        "mysql://root:12345678@localhost:3306/nutrisync_db"
+      ]
+    }
+  }
+}
