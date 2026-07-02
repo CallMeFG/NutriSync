@@ -36,17 +36,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | WhatsApp Cloud API (Meta)
+    | Fonnte WhatsApp Gateway (provider MVP NutriSync)
     |--------------------------------------------------------------------------
-    | PENTING: access_token JANGAN pernah di-expose ke frontend (prefix VITE_).
-    | Template emergency harus sudah disetujui Meta sebelum bisa dipakai.
+    | Fonnte digunakan sebagai provider notifikasi WhatsApp untuk fitur Family Sync.
+    | Dipilih karena tidak butuh verifikasi bisnis Meta / review template — cukup
+    | scan QR code dengan nomor cadangan di fonnte.com, lalu isi FONNTE_TOKEN.
+    |
+    | CATATAN: Jangan expose FONNTE_TOKEN ke frontend (jangan prefix VITE_).
+    | Nomor yang scan QR WAJIB nomor cadangan — bukan nomor pribadi utama.
+    | Jalur migrasi ke Meta Cloud API resmi: tersedia di masa depan pasca-MVP.
     */
-    'whatsapp' => [
-        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
-        'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
-        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
-        'verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
-        'template_emergency' => env('WHATSAPP_TEMPLATE_NAME_EMERGENCY', 'nutrisync_emergency_alert'),
+    'fonnte' => [
+        'token' => env('FONNTE_TOKEN'),
     ],
 
     /*
