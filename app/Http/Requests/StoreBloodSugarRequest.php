@@ -28,7 +28,7 @@ class StoreBloodSugarRequest extends FormRequest
             'client_uuid' => ['required', 'uuid', 'max:36'],
             'glucose_level' => ['required', 'integer', 'min:20', 'max:600'], // Rentang PERKENI / ADA di blueprint §9
             'measurement_type' => ['required', 'string', 'in:puasa,sewaktu,hba1c'],
-            'measurement_time' => ['required', 'date', 'before_or_equal:now'],
+            'measurement_time' => ['required', 'date', 'before_or_equal:+1 day'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }
@@ -45,7 +45,7 @@ class StoreBloodSugarRequest extends FormRequest
             'glucose_level.min' => 'Kadar gula darah tidak realistis (minimal 20 mg/dL).',
             'glucose_level.max' => 'Kadar gula darah melebih batas maksimal pengecekan (maksimal 600 mg/dL).',
             'measurement_type.in' => 'Tipe pemeriksaan harus puasa, sewaktu, atau hba1c.',
-            'measurement_time.before_or_equal' => 'Waktu pemeriksaan tidak boleh di masa depan.',
+            'measurement_time.before_or_equal' => 'Waktu pemeriksaan tidak boleh melebihi hari ini/besok.',
         ];
     }
 }

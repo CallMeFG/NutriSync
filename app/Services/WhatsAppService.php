@@ -45,14 +45,22 @@ class WhatsAppService
             ? $customMessage
             : 'Segera periksa asupan gula anak Anda dan konsultasikan ke faskes atau dokter terdekat.';
 
+        $firstAidGuide = strtolower($riskStatus) === 'bahaya'
+            ? "\n\n🏥 *PANDUAN P3K DARURAT ORANG TUA:*\n"
+              ."1️⃣ Berikan air putih hangat 500 ml segera untuk membantu hidrasi.\n"
+              ."2️⃣ Hentikan sementara seluruh asupan minuman manis kemasan atau karbohidrat cepat serap.\n"
+              .'3️⃣ Cek ulang gula darah anak dalam 60 menit atau segera konsultasikan ke Faskes terdekat.'
+            : '';
+
         $message = sprintf(
             "🚨 *PERINGATAN DARURAT NutriSync*\n\n".
             "Pasien atas nama *%s* saat ini terdeteksi dalam status risiko *%s*.\n\n".
-            "📋 Catatan: %s\n\n".
+            "📋 Catatan: %s%s\n\n".
             '_Pesan otomatis dari sistem NutriSync. Jangan balas pesan ini._',
             $patientName,
             strtoupper($riskStatus),
-            $note
+            $note,
+            $firstAidGuide
         );
 
         try {

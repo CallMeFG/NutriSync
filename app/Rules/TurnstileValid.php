@@ -33,11 +33,24 @@ class TurnstileValid implements ValidationRule
                 [
                     'secret' => config('services.turnstile.secret_key'),
                     'response' => $value,
-                    'remoteip' => request()->ip(),
                 ]
             );
 
             if (! $response->successful() || ! ($response->json('success') ?? false)) {
+                Log::warning('[Turnstile] Verification failed from Cloudflare API:', [
+                    'status' => $response->status(),
+                    'error_codes' => $response->json('error-codes') ?? [],
+                    'body' => $response->json(),
+                ]);
+
+                // Di environment development lokal (APP_ENV=local), jika verifikasi Cloudflare gagal
+                // (misal karena perubahan link Cloudflare Tunnel / hostname mismatch), izinkan bypass
+                if (app()->environment('local', 'testing')) {
+                    Log::info('[Local Dev] Turnstile verification failed from API, but bypassed because APP_ENV=local.');
+
+                    return;
+                }
+
                 $fail('Verifikasi keamanan gagal. Silakan coba lagi.');
             }
         } catch (ConnectionException $e) {

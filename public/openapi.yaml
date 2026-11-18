@@ -1,0 +1,201 @@
+openapi: 3.0.3
+info:
+  title: NutriSync API
+  description: |
+    Spesifikasi REST & JSON API untuk NutriSync PWA — Sistem deteksi dini & pemantauan diabetes untuk remaja Indonesia.
+    Menggunakan skema idempotency `client_uuid` untuk sinkronisasi offline (IndexedDB/Dexie.js).
+  version: 2.1.0
+  contact:
+    name: NutriSync Engineering Team
+servers:
+  - url: /
+    description: Server Utama Aplikasi (Laravel 13)
+paths:
+  /patient/nutrition/sync-offline:
+    post:
+      summary: Sinkronisasi Offline Log Nutrisi
+      description: |
+        Menerima array log pemindaian nutrisi dari antrean offline Dexie.js.
+        Menggunakan `client_uuid` sebagai kunci idempotency untuk mencegah duplikasi entri saat retry.
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - logs
+              properties:
+                logs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OfflineNutritionLogInput'
+      responses:
+        '200':
+          description: Sinkronisasi berhasil diproses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  synced_count:
+                    type: integer
+                    example: 2
+
+  /patient/blood-sugar/sync-offline:
+    post:
+      summary: Sinkronisasi Offline Log Gula Darah
+      description: |
+        Menerima array log pemeriksaan gula darah dari antrean offline lokal.
+        Setiap entri divalidasi dan disimpan secara idempoten menggunakan `client_uuid`.
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - logs
+              properties:
+                logs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OfflineBloodSugarLogInput'
+      responses:
+        '200':
+          description: Berhasil disinkronkan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  synced_count:
+                    type: integer
+                    example: 1
+
+  /patient/nutrition/lookup:
+    get:
+      summary: Lookup Barcode Nutrisi (OpenFoodFacts API)
+      description: |
+        Mencari data nutrisi produk kemasan berdasarkan kode barcode.
+        Dilengkapi dengan timeout 5 detik dan fallback jika produk tidak ditemukan.
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: barcode
+          in: query
+          required: true
+          schema:
+            type: string
+            example: '8999999192301'
+      responses:
+        '200':
+          description: Produk ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductLookupResponse'
+        '404':
+          description: Produk tidak ditemukan (mengizinkan fallback input manual)
+
+  /otp/send:
+    post:
+      summary: Kirim Kode OTP via Email
+      description: Mengirim kode verifikasi 6 digit ke alamat email pengguna dengan proteksi rate limit.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: OTP berhasil dikirim
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: nutrisync_session
+  schemas:
+    OfflineNutritionLogInput:
+      type: object
+      required:
+        - client_uuid
+        - barcode
+        - product_name
+        - sugar_per_serving_g
+        - scanned_at
+      properties:
+        client_uuid:
+          type: string
+          format: uuid
+          example: '550e8400-e29b-41d4-a716-446655440000'
+        barcode:
+          type: string
+          example: '8991001200000'
+        product_name:
+          type: string
+          example: 'Minuman Teh Manis'
+        sugar_per_serving_g:
+          type: number
+          format: float
+          example: 18.5
+        scanned_at:
+          type: string
+          format: date-time
+
+    OfflineBloodSugarLogInput:
+      type: object
+      required:
+        - client_uuid
+        - glucose_level
+        - measurement_type
+        - measurement_time
+      properties:
+        client_uuid:
+          type: string
+          format: uuid
+          example: '880e8400-e29b-41d4-a716-446655440001'
+        glucose_level:
+          type: integer
+          minimum: 20
+          maximum: 600
+          example: 98
+        measurement_type:
+          type: string
+          enum: [puasa, sewaktu, hba1c]
+          example: puasa
+        measurement_time:
+          type: string
+          format: date-time
+
+    ProductLookupResponse:
+      type: object
+      properties:
+        barcode:
+          type: string
+        name:
+          type: string
+        sugar_g:
+          type: number
+        serving_size:
+          type: string

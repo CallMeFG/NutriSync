@@ -30,7 +30,7 @@ class ScanProductRequest extends FormRequest
             'product_name' => ['required_without:barcode', 'nullable', 'string', 'max:255'],
             'sugar_g' => ['required', 'numeric', 'min:0', 'max:500'], // Maksimal 500g gula per takaran saji
             'serving_size_g' => ['nullable', 'numeric', 'min:1', 'max:2000'],
-            'scanned_at' => ['nullable', 'date', 'before_or_equal:now'],
+            'scanned_at' => ['nullable', 'date'],
         ];
     }
 

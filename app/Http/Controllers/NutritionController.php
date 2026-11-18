@@ -71,8 +71,11 @@ class NutritionController extends Controller
     /**
      * Simpan hasil pemindaian atau input manual nutrisi makanan/minuman.
      */
-    public function store(ScanProductRequest $request, AIPredictorService $aiPredictorService): RedirectResponse
-    {
+    public function store(
+        ScanProductRequest $request,
+        AIPredictorService $aiPredictorService,
+        OpenFoodFactsService $offService
+    ): RedirectResponse {
         $patient = $request->user()->patient;
         $validated = $request->validated();
 
@@ -96,6 +99,16 @@ class NutritionController extends Controller
                 'scanned_at' => $scannedAt,
             ]
         );
+
+        // Jika memiliki barcode, simpan ke katalog lokal agar memperkaya database UMKM/komunitas
+        if (! empty($validated['barcode'])) {
+            $offService->cacheProduct(
+                $validated['barcode'],
+                $validated['product_name'] ?? 'Produk Hasil Pemindaian',
+                (float) $validated['sugar_g'],
+                (float) ($validated['serving_size_g'] ?? 100)
+            );
+        }
 
         // Evaluasi akumulasi harian dan perbarui status pasien (serta kirim notifikasi jika bahaya)
         $aiPredictorService->processNewNutritionLog($patient, (float) $log->sugar_per_serving_g);

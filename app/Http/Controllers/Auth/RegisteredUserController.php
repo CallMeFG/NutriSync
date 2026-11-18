@@ -42,6 +42,10 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|string|in:patient,caregiver',
             'phone_number' => 'nullable|string|max:20',
+            'birth_date' => 'nullable|date',
+            'weight_kg' => 'nullable|numeric|min:20|max:200',
+            'height_cm' => 'nullable|numeric|min:100|max:220',
+            'family_diabetes_history' => 'nullable|boolean',
             'cf-turnstile-response' => [app()->environment('local', 'testing') ? 'nullable' : 'required', new TurnstileValid],
         ]);
 
@@ -53,16 +57,17 @@ class RegisteredUserController extends Controller
             'phone_number' => $request->phone_number,
         ]);
 
-        // Jika mendaftar sebagai patient, otomatis buat profil patient dengan pairing_code unik
+        // Jika mendaftar sebagai patient, otomatis buat profil patient dengan pairing_code unik dan data klinis dari form
         if ($user->role === UserRole::Patient) {
             for ($i = 0; $i < 5; $i++) {
                 $code = 'NS'.strtoupper(Str::random(4));
                 try {
                     $user->patient()->create([
                         'pairing_code' => $code,
-                        'birth_date' => now()->subYears(15)->format('Y-m-d'),
-                        'weight_kg' => 50.0,
-                        'height_cm' => 160.0,
+                        'birth_date' => $request->birth_date ?? now()->subYears(15)->format('Y-m-d'),
+                        'weight_kg' => $request->weight_kg ?? 50.0,
+                        'height_cm' => $request->height_cm ?? 160.0,
+                        'family_diabetes_history' => $request->boolean('family_diabetes_history', false),
                         'daily_sugar_limit_g' => config('nutrisync.default_daily_sugar_limit_g', 50),
                         'current_risk_status' => RiskStatus::Aman,
                     ]);

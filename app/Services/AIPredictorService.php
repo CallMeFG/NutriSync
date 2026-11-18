@@ -6,11 +6,13 @@ use App\Enums\RiskStatus;
 use App\Jobs\SendFamilySyncAlert;
 use App\Models\AiRiskSnapshot;
 use App\Models\Patient;
+use Illuminate\Support\Facades\Cache;
 
 class AIPredictorService
 {
     public function __construct(
-        private RiskThresholdService $thresholdService
+        private RiskThresholdService $thresholdService,
+        private GeminiRecommendationService $geminiService
     ) {}
 
     /**
@@ -30,11 +32,22 @@ class AIPredictorService
 
         $limit = (float) $baseLimit;
 
-        // Penyesuaian berdasarkan BMI (Overweight >= 25, Obese >= 30)
-        if ($bmi >= 30) {
-            $limit -= 10;
-        } elseif ($bmi >= 25) {
-            $limit -= 5;
+        // Penyesuaian berdasarkan BMI Klinis (Pediatric Z-Score WHO untuk ≤19 tahun, Adult BMI untuk >19 tahun)
+        $ageYears = (int) ($patient->age ?? 16);
+        if ($ageYears >= 10 && $ageYears <= 19) {
+            $zScore = $this->calculatePediatricBmiZScore($bmi, $ageYears);
+            if ($zScore >= 2.0) {
+                $limit -= 10; // Obesitas Pediatrik (WHO >= +2 SD)
+            } elseif ($zScore >= 1.0) {
+                $limit -= 5;  // Overweight Pediatrik (WHO >= +1 SD)
+            }
+        } else {
+            // Standar dewasa untuk usia > 19 tahun
+            if ($bmi >= 30) {
+                $limit -= 10;
+            } elseif ($bmi >= 25) {
+                $limit -= 5;
+            }
         }
 
         // Penyesuaian berdasarkan riwayat diabetes keluarga
@@ -90,11 +103,19 @@ class AIPredictorService
 
         $this->updatePatientStatusAndNotify($patient, $newStatus);
 
+        $recommendationText = $this->geminiService->generatePersonalizedRecommendation($patient, $newStatus, $newLimit);
+
         return $patient->riskSnapshots()->create([
-            'risk_level' => $newStatus,
-            'daily_limit_g' => $newLimit,
-            'recommendation_text' => $this->generateRuleBasedRecommendation($patient, $newStatus, $newLimit),
-            'snapshot_date' => now()->format('Y-m-d'),
+            'status' => $newStatus,
+            'computed_daily_limit_g' => $newLimit,
+            'input_variables' => [
+                'age' => $patient->age ?? 16,
+                'bmi' => ($patient->height_cm > 0 && $patient->weight_kg > 0) ? round($patient->weight_kg / (($patient->height_cm / 100) * ($patient->height_cm / 100)), 1) : 22.0,
+                'family_history' => (bool) $patient->family_diabetes_history,
+                'avg_sugar_7d' => round($patient->nutritionLogs()->where('scanned_at', '>=', now()->subDays(7))->sum('sugar_per_serving_g') / 7, 1),
+                'recommendation_text' => $recommendationText,
+            ],
+            'created_at' => now(),
         ]);
     }
 
@@ -115,6 +136,8 @@ class AIPredictorService
     public function processNewBloodSugarLog(Patient $patient, int $glucoseLevel): RiskStatus
     {
         $newStatus = $this->thresholdService->assessGlucoseStatus($glucoseLevel);
+
+        $this->awardGamificationActivity($patient);
 
         $this->updatePatientStatusAndNotify($patient, $newStatus);
 
@@ -141,9 +164,50 @@ class AIPredictorService
             $newStatus = RiskStatus::Waspada;
         }
 
+        $this->awardGamificationActivity($patient);
+
         $this->updatePatientStatusAndNotify($patient, $newStatus);
 
         return $productStatus;
+    }
+
+    /**
+     * Proses log aktivitas (minum air / olahraga) dan berikan poin gamifikasi serta streak harian.
+     */
+    public function processNewActivityLog(Patient $patient): void
+    {
+        $this->awardGamificationActivity($patient);
+    }
+
+    /**
+     * Berikan poin gamifikasi dan streak harian dengan proteksi Anti-Cheat:
+     * 1. Cooldown Anti-Spam 60 detik antar pemberian poin.
+     * 2. Batas harian maksimal 50 poin per pasien per hari kalender.
+     * 3. Streak hanya bertambah maksimal 1 kali per hari kalender.
+     */
+    private function awardGamificationActivity(Patient $patient): void
+    {
+        $cooldownKey = "user:{$patient->id}:gamification_cooldown";
+
+        // 1. Cek Cooldown Anti-Spam 60 detik (atomic lock/add via Cache)
+        if (! Cache::add($cooldownKey, true, 60)) {
+            return; // Masih dalam cooldown, lewati penambahan poin/streak
+        }
+
+        // 2. Cek Batas Poin Harian (Maksimal 50 poin per hari)
+        $todayKey = "user:{$patient->id}:points_awarded_".now()->toDateString();
+        $awardedToday = (int) Cache::get($todayKey, 0);
+
+        if ($awardedToday < 50) {
+            $patient->increment('nutri_points', 10);
+            Cache::put($todayKey, $awardedToday + 10, now()->endOfDay());
+        }
+
+        // 3. Cek Streak Harian (+1 per hari kalender)
+        $streakKey = "user:{$patient->id}:streak_awarded_".now()->toDateString();
+        if (Cache::add($streakKey, true, now()->endOfDay())) {
+            $patient->increment('streak_count', 1);
+        }
     }
 
     /**
@@ -168,12 +232,34 @@ class AIPredictorService
     }
 
     /**
-     * Narasi rekomendasi deterministik tanpa LLM untuk phase MVP.
+     * Narasi rekomendasi melalui Gemini AI API / fallback deterministik.
      */
     private function generateRuleBasedRecommendation(Patient $patient, RiskStatus $status, int $dailyLimit): string
     {
-        $statusText = strtoupper($status->value);
+        return $this->geminiService->generatePersonalizedRecommendation($patient, $status, $dailyLimit);
+    }
 
-        return "Batas asupan gula harian Anda adalah {$dailyLimit} gram/hari. Status risiko terkini: {$statusText}. Pertahankan konsumsi air putih, hindari minuman manis kemasan, dan rutin lakukan aktivitas fisik minimal 30 menit sehari.";
+    /**
+     * Kalkulasi pediatrik BMI-for-Age Z-Score berdasarkan WHO Growth Standards untuk remaja usia 10–19 tahun.
+     */
+    public function calculatePediatricBmiZScore(float $bmi, int $ageYears): float
+    {
+        // Standar rujukan median BMI & SD WHO 2007 (5-19 tahun)
+        $whoStandards = [
+            10 => ['median' => 16.6, 'sd' => 1.8],
+            11 => ['median' => 17.2, 'sd' => 1.9],
+            12 => ['median' => 17.8, 'sd' => 2.1],
+            13 => ['median' => 18.5, 'sd' => 2.2],
+            14 => ['median' => 19.2, 'sd' => 2.4],
+            15 => ['median' => 19.9, 'sd' => 2.5],
+            16 => ['median' => 20.5, 'sd' => 2.6],
+            17 => ['median' => 21.0, 'sd' => 2.7],
+            18 => ['median' => 21.3, 'sd' => 2.8],
+            19 => ['median' => 21.5, 'sd' => 2.8],
+        ];
+
+        $ref = $whoStandards[$ageYears] ?? ['median' => 20.0, 'sd' => 2.5];
+
+        return round(($bmi - $ref['median']) / max(0.1, $ref['sd']), 2);
     }
 }

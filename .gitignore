@@ -5,6 +5,7 @@ Thumbs.db
 # ── NutriSync: file lokal yang tidak boleh masuk repo ──────────────────────
 # Folder konfigurasi agent AI (instruksi, blueprint, checklist)
 .agent/
+.agents/
 # File PDF desain/rancangan sistem — ukuran besar, simpan di Google Drive/external
 *.pdf
 
@@ -37,3 +38,9 @@ Homestead.yaml
 /public/storage
 /storage/pail
 /vendor
+
+# ── Playwright E2E (latihan testing) ───────────────────────────────────────
+.env.e2e
+/tests/playwright-report/
+/tests/test-results/
+/tests/E2E/.auth/

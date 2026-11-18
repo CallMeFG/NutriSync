@@ -6,14 +6,19 @@ export default function TurnstileWidget({ onVerify }) {
     const { appConfig } = usePage().props;
     const siteKey = appConfig?.turnstileSiteKey;
     const turnstileRef = useRef(null);
+    const onVerifyRef = useRef(onVerify);
+
+    useEffect(() => {
+        onVerifyRef.current = onVerify;
+    }, [onVerify]);
 
     useEffect(() => {
         // Graceful Local Testing Fallback:
-        // Jika siteKey kosong atau belum diset di .env, kirim token placeholder
+        // Jika siteKey kosong atau belum diset di .env, kirim token placeholder hanya sekali saat mount
         if (!siteKey) {
-            onVerify('dev_placeholder_token');
+            onVerifyRef.current?.('dev_placeholder_token');
         }
-    }, [siteKey, onVerify]);
+    }, [siteKey]);
 
     if (!siteKey) {
         return (
@@ -29,10 +34,10 @@ export default function TurnstileWidget({ onVerify }) {
             <Turnstile
                 ref={turnstileRef}
                 sitekey={siteKey}
-                onVerify={(token) => onVerify(token)}
-                onError={() => onVerify(null)}
+                onVerify={(token) => onVerifyRef.current?.(token)}
+                onError={() => onVerifyRef.current?.(null)}
                 onExpire={() => {
-                    onVerify(null);
+                    onVerifyRef.current?.(null);
                     if (turnstileRef.current?.reset) {
                         turnstileRef.current.reset();
                     }

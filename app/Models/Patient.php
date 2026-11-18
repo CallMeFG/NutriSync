@@ -27,6 +27,11 @@ class Patient extends Model
         'satusehat_id',
     ];
 
+    /**
+     * Sertakan atribut dinamis 'age' saat model diserialisasi ke JSON/array.
+     */
+    protected $appends = ['age'];
+
     protected function casts(): array
     {
         return [
@@ -82,9 +87,19 @@ class Patient extends Model
         return $this->hasMany(NutritionLog::class);
     }
 
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
+
     public function riskSnapshots()
     {
         return $this->hasMany(AiRiskSnapshot::class);
+    }
+
+    public function aiRiskSnapshots()
+    {
+        return $this->riskSnapshots();
     }
 
     /**

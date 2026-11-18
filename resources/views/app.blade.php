@@ -10,6 +10,10 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
+        <!-- PWA & Theme -->
+        <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
+        <meta name="theme-color" content="#1B6E63">
+
         <!-- Scripts -->
         @routes
         @viteReactRefresh

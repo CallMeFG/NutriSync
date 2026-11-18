@@ -38,6 +38,32 @@ class BloodSugarController extends Controller
     }
 
     /**
+     * Tampilkan tren gula darah dengan grafik dan analisis Recharts.
+     */
+    public function trend(Request $request): Response
+    {
+        $user = $request->user();
+        $patient = $user->patient;
+
+        if (! $patient) {
+            abort(403, 'Profil pasien tidak ditemukan.');
+        }
+
+        $logs = $patient->bloodSugarLogs()
+            ->orderByDesc('measurement_time')
+            ->take(60)
+            ->get();
+
+        $latestGlucose = $logs->first();
+        $aiRecommendation = 'Terus pantau asupan nutrisi Anda. Pertahankan aktivitas fisik 30 menit setiap hari untuk menjaga stabilitas gula darah.';
+
+        return Inertia::render('Patient/BloodSugar/Trend', [
+            'logs' => $logs,
+            'aiRecommendation' => $aiRecommendation,
+        ]);
+    }
+
+    /**
      * Tampilkan riwayat log untuk caregiver atau faskes (dengan otorisasi IDOR).
      */
     public function show(Patient $patient): Response
@@ -49,9 +75,21 @@ class BloodSugarController extends Controller
             ->orderByDesc('measurement_time')
             ->paginate(15);
 
+        $nutritionLogs = $patient->nutritionLogs()
+            ->orderByDesc('scanned_at')
+            ->take(15)
+            ->get();
+
+        $aiSnapshots = $patient->riskSnapshots()
+            ->orderByDesc('id')
+            ->take(5)
+            ->get();
+
         return Inertia::render('Caregiver/PatientDetail', [
             'patient' => $patient->load('user'),
             'logs' => $logs,
+            'nutritionLogs' => $nutritionLogs,
+            'aiSnapshots' => $aiSnapshots,
         ]);
     }
 

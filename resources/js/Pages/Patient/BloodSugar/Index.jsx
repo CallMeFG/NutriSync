@@ -71,6 +71,16 @@ export default function BloodSugarIndex({ logs, currentStatus }) {
                         <h3 className="text-md font-bold text-gray-800 mb-4 flex items-center gap-2">
                             <span>📝 Catat Hasil Pemeriksaan</span>
                         </h3>
+                        {Object.keys(errors).length > 0 && (
+                            <div className="p-3 mb-4 rounded-xl bg-red-50 border border-red-300 text-red-800 text-xs font-semibold">
+                                <p className="font-bold mb-1">❌ Gagal Menyimpan Data:</p>
+                                <ul className="list-disc list-inside space-y-0.5">
+                                    {Object.entries(errors).map(([field, msg]) => (
+                                        <li key={field}>{msg}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
@@ -116,6 +126,7 @@ export default function BloodSugarIndex({ logs, currentStatus }) {
                                     <input
                                         type="datetime-local"
                                         required
+                                        max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                                         value={data.measurement_time}
                                         onChange={(e) => setData('measurement_time', e.target.value)}
                                         className="w-full rounded-xl border-gray-300 text-sm focus:border-emerald-500 focus:ring-emerald-500"

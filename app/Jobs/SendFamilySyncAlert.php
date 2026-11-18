@@ -40,6 +40,11 @@ class SendFamilySyncAlert implements ShouldQueue
 
     /**
      * Execute the job.
+     *
+     * Mengirim notifikasi ke SEMUA caregiver terlebih dahulu, baru melaporkan kegagalan.
+     * Sebelumnya: throw di tengah loop → caregiver ke-2+ bisa terlewat jika caregiver ke-1 gagal.
+     * Sekarang: kumpulkan semua kegagalan → throw satu exception di akhir agar retry mechanism
+     * mencoba ulang hanya untuk yang gagal tanpa mengorbankan yang lain.
      */
     public function handle(WhatsAppService $whatsAppService): void
     {
@@ -51,6 +56,8 @@ class SendFamilySyncAlert implements ShouldQueue
 
             return;
         }
+
+        $failedNumbers = [];
 
         foreach ($caregivers as $caregiver) {
             if (empty($caregiver->phone_number)) {
@@ -67,9 +74,16 @@ class SendFamilySyncAlert implements ShouldQueue
             );
 
             if (! $success) {
-                // Throw exception agar mekanisme retry/backoff queue bekerja jika gagal kirim
-                throw new \Exception("Gagal mengirim WhatsApp alert ke nomor {$caregiver->phone_number}.");
+                $failedNumbers[] = $caregiver->phone_number;
+                Log::warning("SendFamilySyncAlert: Gagal mengirim ke {$caregiver->phone_number} (caregiver {$caregiver->name}), akan dikumpulkan untuk retry.");
             }
+        }
+
+        // Throw exception SETELAH semua caregiver dicoba — agar mekanisme retry/backoff queue bekerja
+        if (! empty($failedNumbers)) {
+            throw new \Exception(
+                'Gagal mengirim WhatsApp alert ke '.count($failedNumbers).' nomor: '.implode(', ', $failedNumbers)
+            );
         }
     }
 

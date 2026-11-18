@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\LocalProduct;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,16 @@ class OpenFoodFactsService
      */
     public function lookup(string $barcode): ?array
     {
+        // 1. Cek database lokal dulu (cache produk Indonesia + demo data)
+        //    Tidak butuh koneksi internet, langsung return jika ditemukan.
+        $local = LocalProduct::where('barcode', $barcode)->first();
+        if ($local) {
+            Log::info("OpenFoodFactsService: Barcode {$barcode} ditemukan di database lokal ({$local->product_name}).");
+
+            return $local->toNutritionArray();
+        }
+
+        // 2. Fallback ke OpenFoodFacts API jika tidak ada di database lokal
         $url = "https://world.openfoodfacts.org/api/v0/product/{$barcode}.json";
 
         try {
@@ -28,11 +39,22 @@ class OpenFoodFactsService
 
             if ($response->successful() && $response->json('status') == 1) {
                 $product = $response->json('product');
+                $formatted = $this->formatProductData($product);
 
-                return $this->formatProductData($product);
+                // Otomatis simpan ke database lokal agar pemindai selanjutnya instan (<10ms) dan offline-ready
+                $this->cacheProduct(
+                    $barcode,
+                    $formatted['name'],
+                    $formatted['sugar_per_serving_g'],
+                    $formatted['serving_size_g'],
+                    $formatted['brand'],
+                    $formatted['image_url']
+                );
+
+                return $formatted;
             }
 
-            Log::info("OpenFoodFacts: Barcode {$barcode} tidak ditemukan di database.");
+            Log::info("OpenFoodFacts: Barcode {$barcode} tidak ditemukan di database lokal maupun OpenFoodFacts.");
 
             return null;
         } catch (ConnectionException $e) {
@@ -44,6 +66,33 @@ class OpenFoodFactsService
 
             return null;
         }
+    }
+
+    /**
+     * Simpan atau perbarui produk ke dalam katalog lokal (UMKM & produk kemasan).
+     */
+    public function cacheProduct(
+        string $barcode,
+        string $productName,
+        float $sugarPerServingG,
+        float $servingSizeG = 100.0,
+        ?string $brand = null,
+        ?string $imageUrl = null
+    ): LocalProduct {
+        $sugar100g = $servingSizeG > 0 ? round(($sugarPerServingG / $servingSizeG) * 100, 2) : $sugarPerServingG;
+
+        return LocalProduct::updateOrCreate(
+            ['barcode' => $barcode],
+            [
+                'product_name' => trim($productName),
+                'brand' => $brand,
+                'sugar_per_100g' => $sugar100g,
+                'serving_size_g' => round($servingSizeG, 2),
+                'sugar_per_serving_g' => round($sugarPerServingG, 2),
+                'image_url' => $imageUrl,
+                'is_demo_data' => false,
+            ]
+        );
     }
 
     /**

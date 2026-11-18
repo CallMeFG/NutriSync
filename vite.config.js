@@ -20,7 +20,7 @@ export default defineConfig({
                 theme_color: '#1B6E63',
                 background_color: '#ffffff',
                 display: 'standalone',
-                start_url: '/app/dashboard',
+                start_url: '/dashboard',
                 icons: [
                     // WAJIB minimal 192x192 & 512x512, tanpa ini prompt "Add to Home Screen" tidak muncul
                     { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

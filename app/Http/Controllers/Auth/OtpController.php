@@ -26,10 +26,14 @@ class OtpController extends Controller
             return redirect()->route('pairing.show');
         }
 
+        $purpose = 'email_verification';
+
         return Inertia::render('Auth/VerifyOtp', [
             'email' => $request->user()->email,
             'status' => session('status'),
-            'purpose' => 'email_verification',
+            'purpose' => $purpose,
+            'nextResendAt' => $this->otpService->getNextResendAt($request->user(), $purpose),
+            'devOtpCode' => (config('mail.default') === 'log') ? session('dev_otp_code_'.$purpose) : null,
         ]);
     }
 
@@ -58,7 +62,7 @@ class OtpController extends Controller
             return back()->withErrors(['code' => 'Kode salah atau sudah kedaluwarsa.']);
         }
 
-        $request->user()->update(['email_verified_at' => now()]);
+        $request->user()->markEmailAsVerified();
 
         // Otomatis tandai device ini sebagai trusted setelah verifikasi email sukses
         $cookie = $this->deviceTrust->trustThisDevice($request->user(), $request);
@@ -75,10 +79,14 @@ class OtpController extends Controller
             return redirect()->route('login');
         }
 
+        $purpose = 'step_up_auth';
+
         return Inertia::render('Auth/VerifyOtp', [
             'email' => $user->email,
             'status' => session('status'),
-            'purpose' => 'step_up_auth',
+            'purpose' => $purpose,
+            'nextResendAt' => $this->otpService->getNextResendAt($user, $purpose),
+            'devOtpCode' => (config('mail.default') === 'log') ? session('dev_otp_code_'.$purpose) : null,
         ]);
     }
 
